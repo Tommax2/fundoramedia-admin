@@ -8,6 +8,9 @@ const emptyForm = {
   content: "",
   imageUrl: "",
   imagePublicId: "",
+  secondaryImageUrl: "",
+  secondaryImagePublicId: "",
+  isFeatured: false,
   status: "Draft",
 };
 
@@ -21,8 +24,10 @@ function BlogManagerPage() {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingPrimary, setUploadingPrimary] = useState(false);
+  const [uploadingSecondary, setUploadingSecondary] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
+  const [carouselStart, setCarouselStart] = useState(0);
 
   const submitLabel = useMemo(() => (editingId ? "Update Post" : "Add Post"), [editingId]);
   const formPreviewUrl = form.imageUrl || extractImageFromContent(form.content);
@@ -32,8 +37,8 @@ function BlogManagerPage() {
   }, []);
 
   function handleChange(event) {
-    const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = event.target;
+    setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   }
 
   async function handleSubmit(event) {
@@ -51,20 +56,49 @@ function BlogManagerPage() {
     setPosts(await api.getPosts());
   }
 
-  async function handleImageUpload(event) {
+  const usingCarousel = posts.length > 3;
+  const visiblePosts = usingCarousel
+    ? [0, 1, 2].map((offset) => posts[(carouselStart + offset) % posts.length]).filter(Boolean)
+    : posts;
+
+  async function handlePrimaryImageUpload(event) {
     const file = event.target.files?.[0];
     if (!file) return;
-
     try {
-      setUploadingImage(true);
-      setUploadMessage("Uploading image...");
-      const uploaded = await api.uploadImage(file);
-      setForm((prev) => ({ ...prev, imageUrl: uploaded.url, imagePublicId: uploaded.publicId || uploaded.filename || "" }));
-      setUploadMessage("Image uploaded.");
-    } catch (error) {
+      setUploadingPrimary(true);
+      setUploadMessage("Uploading main image...");
+      const result = await api.uploadImage(file);
+      setForm((prev) => ({
+        ...prev,
+        imageUrl: result.url,
+        imagePublicId: result.publicId || result.filename,
+      }));
+      setUploadMessage("Main image uploaded.");
+    } catch {
       setUploadMessage("Image upload failed. Check Cloudinary settings and try again.");
     } finally {
-      setUploadingImage(false);
+      setUploadingPrimary(false);
+      event.target.value = "";
+    }
+  }
+
+  async function handleSecondaryImageUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingSecondary(true);
+      setUploadMessage("Uploading secondary image...");
+      const result = await api.uploadImage(file);
+      setForm((prev) => ({
+        ...prev,
+        secondaryImageUrl: result.url,
+        secondaryImagePublicId: result.publicId || result.filename,
+      }));
+      setUploadMessage("Secondary image uploaded.");
+    } catch {
+      setUploadMessage("Image upload failed. Check Cloudinary settings and try again.");
+    } finally {
+      setUploadingSecondary(false);
       event.target.value = "";
     }
   }
@@ -77,6 +111,9 @@ function BlogManagerPage() {
       content: post.content || "",
       imageUrl: post.imageUrl || "",
       imagePublicId: post.imagePublicId || "",
+      secondaryImageUrl: post.secondaryImageUrl || "",
+      secondaryImagePublicId: post.secondaryImagePublicId || "",
+      isFeatured: Boolean(post.isFeatured),
       status: post.status,
     });
     setEditingId(post.id);
@@ -89,6 +126,14 @@ function BlogManagerPage() {
       setEditingId(null);
       setForm(emptyForm);
     }
+  }
+
+  function handleCarouselNext() {
+    setCarouselStart((prev) => (prev + 1) % posts.length);
+  }
+
+  function handleCarouselPrev() {
+    setCarouselStart((prev) => (prev - 1 + posts.length) % posts.length);
   }
 
   return (
@@ -105,11 +150,34 @@ function BlogManagerPage() {
         </select>
         <textarea name="excerpt" placeholder="Short excerpt" rows="3" value={form.excerpt} onChange={handleChange} />
         <textarea name="content" placeholder="Full post content" rows="8" value={form.content} onChange={handleChange} />
-        <label className="upload-label" htmlFor="image-upload">Upload image</label>
-        <input id="image-upload" type="file" accept="image/*" onChange={handleImageUpload} disabled={uploadingImage} />
+        <label className="upload-label" htmlFor="image-upload">Main image</label>
+        <input
+          id="image-upload"
+          type="file"
+          accept="image/*"
+          onChange={handlePrimaryImageUpload}
+          disabled={uploadingPrimary || uploadingSecondary}
+        />
+        <label className="upload-label" htmlFor="secondary-image-upload">Secondary image</label>
+        <input
+          id="secondary-image-upload"
+          type="file"
+          accept="image/*"
+          onChange={handleSecondaryImageUpload}
+          disabled={uploadingPrimary || uploadingSecondary}
+        />
+        <label>
+          <input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} />
+          Featured post
+        </label>
         {formPreviewUrl ? (
           <div className="upload-preview-wrap">
             <img className="upload-preview" src={formPreviewUrl} alt="Uploaded preview" />
+          </div>
+        ) : null}
+        {form.secondaryImageUrl ? (
+          <div className="upload-preview-wrap">
+            <img className="upload-preview" src={form.secondaryImageUrl} alt="Uploaded secondary preview" />
           </div>
         ) : null}
         {uploadMessage ? <p className="subtle upload-message">{uploadMessage}</p> : null}
@@ -127,12 +195,13 @@ function BlogManagerPage() {
                 <th>Title</th>
                 <th>Author</th>
                 <th>Status</th>
+                <th>Featured</th>
                 <th>Views</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {posts.map((post) => (
+              {visiblePosts.map((post) => (
                 <tr key={post.id}>
                   <td>
                     {(post.imageUrl || extractImageFromContent(post.content)) ? (
@@ -144,6 +213,7 @@ function BlogManagerPage() {
                   <td>{post.title}</td>
                   <td>{post.author}</td>
                   <td>{post.status}</td>
+                  <td>{post.isFeatured ? "Yes" : "No"}</td>
                   <td>{post.views || 0}</td>
                   <td className="actions">
                     <button type="button" onClick={() => handleEdit(post)}>Edit</button>
@@ -154,6 +224,13 @@ function BlogManagerPage() {
             </tbody>
           </table>
         )}
+        {usingCarousel ? (
+          <div className="carousel-controls">
+            <button type="button" onClick={handleCarouselPrev}>Previous</button>
+            <span className="subtle">Showing 3 of {posts.length} posts</span>
+            <button type="button" onClick={handleCarouselNext}>Next</button>
+          </div>
+        ) : null}
       </div>
     </section>
   );

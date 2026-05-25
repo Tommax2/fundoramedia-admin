@@ -65,6 +65,22 @@ async function deleteCloudinaryImage(publicId) {
   }
 }
 
+async function uploadToCloudinary(file) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: process.env.CLOUDINARY_FOLDER || "fundoramedia",
+        resource_type: "image",
+      },
+      (error, uploaded) => {
+        if (error) reject(error);
+        else resolve(uploaded);
+      }
+    );
+    stream.end(file.buffer);
+  });
+}
+
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, date: new Date().toISOString(), dbState: mongoose.connection.readyState });
 });
@@ -77,7 +93,18 @@ app.get("/api/posts", async (req, res) => {
 });
 
 app.post("/api/posts", async (req, res) => {
-  const { title, author, excerpt, content, imageUrl, imagePublicId, status } = req.body;
+  const {
+    title,
+    author,
+    excerpt,
+    content,
+    imageUrl,
+    imagePublicId,
+    secondaryImageUrl,
+    secondaryImagePublicId,
+    isFeatured,
+    status,
+  } = req.body;
 
   if (!title || !author) {
     return res.status(400).json({ error: "title and author are required" });
@@ -91,6 +118,9 @@ app.post("/api/posts", async (req, res) => {
     content: content || "",
     imageUrl: imageUrl || "",
     imagePublicId: imagePublicId || "",
+    secondaryImageUrl: secondaryImageUrl || "",
+    secondaryImagePublicId: secondaryImagePublicId || "",
+    isFeatured: Boolean(isFeatured),
     status: status || "Draft",
     slug,
   });
@@ -108,6 +138,13 @@ app.put("/api/posts/:id", async (req, res) => {
   if (current.imagePublicId && updates.imagePublicId && updates.imagePublicId !== current.imagePublicId) {
     await deleteCloudinaryImage(current.imagePublicId);
   }
+  if (
+    current.secondaryImagePublicId &&
+    updates.secondaryImagePublicId &&
+    updates.secondaryImagePublicId !== current.secondaryImagePublicId
+  ) {
+    await deleteCloudinaryImage(current.secondaryImagePublicId);
+  }
 
   const updated = await Post.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true }).lean();
   res.json({ ...updated, id: updated._id });
@@ -118,6 +155,9 @@ app.delete("/api/posts/:id", async (req, res) => {
 
   if (deleted?.imagePublicId) {
     await deleteCloudinaryImage(deleted.imagePublicId);
+  }
+  if (deleted?.secondaryImagePublicId) {
+    await deleteCloudinaryImage(deleted.secondaryImagePublicId);
   }
 
   res.status(204).send();
@@ -146,25 +186,33 @@ app.post("/api/uploads/image", upload.single("image"), async (req, res, next) =>
   }
 
   try {
-    const result = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder: process.env.CLOUDINARY_FOLDER || "fundoramedia",
-          resource_type: "image",
-        },
-        (error, uploaded) => {
-          if (error) reject(error);
-          else resolve(uploaded);
-        }
-      );
-      stream.end(req.file.buffer);
-    });
+    const result = await uploadToCloudinary(req.file);
 
     res.status(201).json({
       filename: result.public_id,
       publicId: result.public_id,
       url: result.secure_url,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/uploads/images", upload.array("images", 2), async (req, res, next) => {
+  const files = req.files || [];
+  if (files.length === 0) {
+    return res.status(400).json({ error: "at least one image file is required" });
+  }
+
+  try {
+    const results = await Promise.all(files.map((file) => uploadToCloudinary(file)));
+    res.status(201).json(
+      results.map((result) => ({
+        filename: result.public_id,
+        publicId: result.public_id,
+        url: result.secure_url,
+      }))
+    );
   } catch (error) {
     next(error);
   }

@@ -162,6 +162,14 @@ button {
   overflow-x: auto;
 }
 
+.carousel-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -237,10 +245,24 @@ td {
 
   .sidebar {
     padding: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 
   .sidebar nav {
     flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .sidebar nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sidebar a {
+    white-space: nowrap;
   }
 
   .content {
@@ -261,6 +283,15 @@ td {
 
   .upload-preview {
     min-height: 160px;
+  }
+
+  .chart {
+    gap: 8px;
+    height: 160px;
+  }
+
+  .carousel-controls {
+    gap: 8px;
   }
 }
 
@@ -302,5 +333,49 @@ td {
   .table-image-preview {
     width: 52px;
     height: 40px;
+  }
+
+  .chart {
+    overflow-x: auto;
+    padding-bottom: 8px;
+    min-width: 0;
+  }
+
+  .carousel-controls {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .carousel-controls button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .content {
+    padding: 10px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-card h3 {
+    font-size: 1.3rem;
+  }
+
+  .sidebar a {
+    font-size: 0.82rem;
+    padding: 6px 8px;
+  }
+
+  .card {
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  h2 {
+    font-size: 1.2rem;
   }
 }

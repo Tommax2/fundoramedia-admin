@@ -45,6 +45,15 @@ export const api = {
       body: formData,
     });
   },
+  uploadImages(files = []) {
+    const formData = new FormData();
+    files.slice(0, 2).forEach((file) => formData.append("images", file));
+
+    return request("/api/uploads/images", {
+      method: "POST",
+      body: formData,
+    });
+  },
   getAnalytics() {
     return request("/api/analytics/summary");
   },
