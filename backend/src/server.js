@@ -4,8 +4,13 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import { existsSync } from "fs";
 import Post from "./models/Post.js";
 import AnalyticsEvent from "./models/AnalyticsEvent.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 dotenv.config();
 
@@ -31,7 +36,14 @@ const upload = multer({
   },
 });
 
-app.use(cors({ origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"], credentials: false }));
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:5175",
+  "https://fundoramedia.vercel.app",
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+];
+app.use(cors({ origin: allowedOrigins, credentials: false }));
 app.use(express.json());
 
 function slugify(text) {
@@ -253,6 +265,14 @@ app.get("/api/analytics/summary", async (_req, res) => {
     topPosts: topPosts.map((post) => ({ ...post, id: post._id })),
   });
 });
+
+const distPath = join(__dirname, "../../dist");
+if (existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get(/^(?!\/api).*/, (_req, res) => {
+    res.sendFile(join(distPath, "index.html"));
+  });
+}
 
 app.use((error, _req, res, _next) => {
   if (error instanceof multer.MulterError) {
