@@ -19,6 +19,15 @@ function extractImageFromContent(content = "") {
   return match?.[1] || "";
 }
 
+const field =
+  "w-full border border-border rounded-xl px-3 py-2.5 text-base bg-white focus:outline-none focus:ring-2 focus:ring-accent/30";
+
+const btnPrimary =
+  "bg-accent text-white rounded-xl px-4 py-2.5 cursor-pointer border-none hover:opacity-90 transition-opacity";
+
+const btnSm =
+  "text-white text-sm rounded-lg px-3 py-1.5 cursor-pointer border-none hover:opacity-90 transition-opacity";
+
 function BlogManagerPage() {
   const [posts, setPosts] = useState([]);
   const [form, setForm] = useState(emptyForm);
@@ -68,11 +77,7 @@ function BlogManagerPage() {
       setUploadingPrimary(true);
       setUploadMessage("Uploading main image...");
       const result = await api.uploadImage(file);
-      setForm((prev) => ({
-        ...prev,
-        imageUrl: result.url,
-        imagePublicId: result.publicId || result.filename,
-      }));
+      setForm((prev) => ({ ...prev, imageUrl: result.url, imagePublicId: result.publicId || result.filename }));
       setUploadMessage("Main image uploaded.");
     } catch {
       setUploadMessage("Image upload failed. Check Cloudinary settings and try again.");
@@ -138,97 +143,117 @@ function BlogManagerPage() {
 
   return (
     <section>
-      <h2>Blog Manager</h2>
-      <p className="subtle">Create, update, and remove blog posts from this panel.</p>
+      <h2 className="text-xl md:text-2xl font-bold mt-0 mb-1">Blog Manager</h2>
+      <p className="text-muted text-sm mt-0 mb-5">Create, update, and remove blog posts from this panel.</p>
 
-      <form className="card form-grid" onSubmit={handleSubmit}>
-        <input name="title" placeholder="Post title" value={form.title} onChange={handleChange} required />
-        <input name="author" placeholder="Author name" value={form.author} onChange={handleChange} required />
-        <select name="status" value={form.status} onChange={handleChange}>
+      {/* Form */}
+      <form
+        className="bg-white border border-border rounded-2xl p-4 shadow-sm mb-5 flex flex-col gap-3"
+        onSubmit={handleSubmit}
+      >
+        <input className={field} name="title" placeholder="Post title" value={form.title} onChange={handleChange} required />
+        <input className={field} name="author" placeholder="Author name" value={form.author} onChange={handleChange} required />
+        <select className={field} name="status" value={form.status} onChange={handleChange}>
           <option>Draft</option>
           <option>Published</option>
         </select>
-        <textarea name="excerpt" placeholder="Short excerpt" rows="3" value={form.excerpt} onChange={handleChange} />
-        <textarea name="content" placeholder="Full post content" rows="8" value={form.content} onChange={handleChange} />
-        <label className="upload-label" htmlFor="image-upload">Main image</label>
+        <textarea className={field} name="excerpt" placeholder="Short excerpt" rows="3" value={form.excerpt} onChange={handleChange} />
+        <textarea className={field} name="content" placeholder="Full post content" rows="8" value={form.content} onChange={handleChange} />
+
+        <label className="font-semibold text-sm" htmlFor="image-upload">Main image</label>
         <input
           id="image-upload"
+          className={field}
           type="file"
           accept="image/*"
           onChange={handlePrimaryImageUpload}
           disabled={uploadingPrimary || uploadingSecondary}
         />
-        <label className="upload-label" htmlFor="secondary-image-upload">Secondary image</label>
+
+        <label className="font-semibold text-sm" htmlFor="secondary-image-upload">Secondary image</label>
         <input
           id="secondary-image-upload"
+          className={field}
           type="file"
           accept="image/*"
           onChange={handleSecondaryImageUpload}
           disabled={uploadingPrimary || uploadingSecondary}
         />
-        <label>
-          <input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} />
+
+        <label className="flex items-center gap-2 text-sm cursor-pointer w-fit">
+          <input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} className="w-4 h-4" />
           Featured post
         </label>
+
         {formPreviewUrl ? (
-          <div className="upload-preview-wrap">
-            <img className="upload-preview" src={formPreviewUrl} alt="Uploaded preview" />
+          <div className="max-w-60 rounded-xl border border-border p-1.5 upload-preview-bg">
+            <img className="w-full min-h-30 rounded-xl border border-border object-contain bg-white" src={formPreviewUrl} alt="Uploaded preview" />
           </div>
         ) : null}
         {form.secondaryImageUrl ? (
-          <div className="upload-preview-wrap">
-            <img className="upload-preview" src={form.secondaryImageUrl} alt="Uploaded secondary preview" />
+          <div className="max-w-60 rounded-xl border border-border p-1.5 upload-preview-bg">
+            <img className="w-full min-h-30 rounded-xl border border-border object-contain bg-white" src={form.secondaryImageUrl} alt="Uploaded secondary preview" />
           </div>
         ) : null}
-        {uploadMessage ? <p className="subtle upload-message">{uploadMessage}</p> : null}
-        <button type="submit">{submitLabel}</button>
+
+        {uploadMessage ? <p className="text-muted text-sm m-0">{uploadMessage}</p> : null}
+
+        <button type="submit" className={btnPrimary}>{submitLabel}</button>
       </form>
 
-      <div className="table-wrap card">
+      {/* Table */}
+      <div className="bg-white border border-border rounded-2xl p-4 shadow-sm overflow-x-auto">
         {loading ? (
-          <p>Loading posts...</p>
+          <p className="text-muted text-sm">Loading posts...</p>
         ) : (
-          <table>
+          <table className="w-full border-collapse" style={{ minWidth: 640 }}>
             <thead>
               <tr>
-                <th>Image</th>
-                <th>Title</th>
-                <th>Author</th>
-                <th>Status</th>
-                <th>Featured</th>
-                <th>Views</th>
-                <th>Actions</th>
+                {["Image", "Title", "Author", "Status", "Featured", "Views", "Actions"].map((h) => (
+                  <th key={h} className="text-left border-b border-border px-2 py-3 text-sm font-semibold text-muted">
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {visiblePosts.map((post) => (
-                <tr key={post.id}>
-                  <td>
+                <tr key={post.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="border-b border-border px-2 py-3">
                     {(post.imageUrl || extractImageFromContent(post.content)) ? (
-                      <img className="table-image-preview" src={post.imageUrl || extractImageFromContent(post.content)} alt={post.title} />
+                      <img
+                        className="w-16 h-12 object-cover rounded-lg border border-border"
+                        src={post.imageUrl || extractImageFromContent(post.content)}
+                        alt={post.title}
+                      />
                     ) : (
-                      <span className="subtle">No image</span>
+                      <span className="text-muted text-xs">No image</span>
                     )}
                   </td>
-                  <td>{post.title}</td>
-                  <td>{post.author}</td>
-                  <td>{post.status}</td>
-                  <td>{post.isFeatured ? "Yes" : "No"}</td>
-                  <td>{post.views || 0}</td>
-                  <td className="actions">
-                    <button type="button" onClick={() => handleEdit(post)}>Edit</button>
-                    <button type="button" className="danger" onClick={() => handleDelete(post.id)}>Delete</button>
+                  <td className="border-b border-border px-2 py-3 text-sm font-medium max-w-40 truncate">{post.title}</td>
+                  <td className="border-b border-border px-2 py-3 text-sm text-muted">{post.author}</td>
+                  <td className="border-b border-border px-2 py-3 text-sm">{post.status}</td>
+                  <td className="border-b border-border px-2 py-3 text-sm">{post.isFeatured ? "Yes" : "No"}</td>
+                  <td className="border-b border-border px-2 py-3 text-sm">{post.views || 0}</td>
+                  <td className="border-b border-border px-2 py-3">
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => handleEdit(post)} className={`${btnSm} bg-accent`}>Edit</button>
+                      <button type="button" onClick={() => handleDelete(post.id)} className={`${btnSm} bg-danger`}>Delete</button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
+
         {usingCarousel ? (
-          <div className="carousel-controls">
-            <button type="button" onClick={handleCarouselPrev}>Previous</button>
-            <span className="subtle">Showing 3 of {posts.length} posts</span>
-            <button type="button" onClick={handleCarouselNext}>Next</button>
+          <div className="flex items-center justify-between gap-3 mt-4 flex-wrap sm:flex-nowrap">
+            <button type="button" onClick={handleCarouselPrev} className={`${btnPrimary} flex-1 sm:flex-none`}>Previous</button>
+            <span className="text-muted text-sm text-center w-full sm:w-auto order-last sm:order-0">
+              Showing 3 of {posts.length} posts
+            </span>
+            <button type="button" onClick={handleCarouselNext} className={`${btnPrimary} flex-1 sm:flex-none`}>Next</button>
           </div>
         ) : null}
       </div>
