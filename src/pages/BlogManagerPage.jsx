@@ -270,6 +270,49 @@ function BlogManagerPage() {
           </div>
         ) : null}
       </div>
+      {/* Comments */}
+      <div className="bg-white border border-border rounded-2xl p-4 shadow-sm mt-5 overflow-x-auto">
+        <h3 className="text-base font-bold mt-0 mb-1">Comments</h3>
+        <p className="text-muted text-sm mt-0 mb-4">Review and remove reader comments from your posts.</p>
+        {commentsLoading ? (
+          <p className="text-muted text-sm">Loading comments…</p>
+        ) : comments.length === 0 ? (
+          <p className="text-muted text-sm">No comments yet.</p>
+        ) : (
+          <table className="w-full border-collapse" style={{ minWidth: 560 }}>
+            <thead>
+              <tr>
+                {["Post", "Author", "Comment", "Date", ""].map((h) => (
+                  <th key={h} className="text-left border-b border-border px-2 py-3 text-sm font-semibold text-muted">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {comments.map((c) => (
+                <tr key={c.id || c._id} className="hover:bg-gray-50 transition-colors">
+                  <td className="border-b border-border px-2 py-3 text-sm font-medium max-w-36 truncate">{c.postTitle}</td>
+                  <td className="border-b border-border px-2 py-3 text-sm text-muted">{c.author}</td>
+                  <td className="border-b border-border px-2 py-3 text-sm max-w-60 truncate">{c.body}</td>
+                  <td className="border-b border-border px-2 py-3 text-xs text-muted whitespace-nowrap">
+                    {new Date(c.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </td>
+                  <td className="border-b border-border px-2 py-3">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteComment(c.id || c._id)}
+                      className={`${btnSm} bg-danger`}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </section>
   );
 }
