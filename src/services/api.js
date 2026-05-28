@@ -57,4 +57,10 @@ export const api = {
   getAnalytics() {
     return request("/api/analytics/summary");
   },
+  getComments() {
+    return request("/api/comments");
+  },
+  deleteComment(id) {
+    return request(`/api/comments/${id}`, { method: "DELETE" });
+  },
 };

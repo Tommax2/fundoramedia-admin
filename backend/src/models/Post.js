@@ -14,6 +14,7 @@ const postSchema = new mongoose.Schema(
     status: { type: String, enum: ["Draft", "Published"], default: "Draft" },
     slug: { type: String, required: true, unique: true, index: true },
     views: { type: Number, default: 0 },
+    likes: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

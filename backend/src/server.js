@@ -9,6 +9,7 @@ import { dirname, join } from "path";
 import { existsSync } from "fs";
 import Post from "./models/Post.js";
 import AnalyticsEvent from "./models/AnalyticsEvent.js";
+import Comment from "./models/Comment.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -265,6 +266,60 @@ app.get("/api/analytics/summary", async (_req, res) => {
     weeklyTraffic,
     topPosts: topPosts.map((post) => ({ ...post, id: post._id })),
   });
+});
+
+// Like a post
+app.post("/api/posts/:id/like", async (req, res) => {
+  const post = await Post.findByIdAndUpdate(
+    req.params.id,
+    { $inc: { likes: 1 } },
+    { new: true }
+  ).lean();
+  if (!post) return res.status(404).json({ error: "post not found" });
+  res.json({ likes: post.likes });
+});
+
+// Get comments for a post
+app.get("/api/posts/:id/comments", async (req, res) => {
+  const comments = await Comment.find({ postId: req.params.id })
+    .sort({ createdAt: -1 })
+    .lean();
+  res.json(comments.map((c) => ({ ...c, id: c._id })));
+});
+
+// Add a comment to a post
+app.post("/api/posts/:id/comments", async (req, res) => {
+  const { author, body } = req.body;
+  if (!author?.trim() || !body?.trim()) {
+    return res.status(400).json({ error: "author and body are required" });
+  }
+  const post = await Post.findById(req.params.id).lean();
+  if (!post) return res.status(404).json({ error: "post not found" });
+
+  const comment = await Comment.create({ postId: req.params.id, author: author.trim(), body: body.trim() });
+  res.status(201).json({ ...comment.toObject(), id: comment._id });
+});
+
+// Get all comments (admin)
+app.get("/api/comments", async (_req, res) => {
+  const comments = await Comment.find({})
+    .sort({ createdAt: -1 })
+    .populate("postId", "title")
+    .lean();
+  res.json(
+    comments.map((c) => ({
+      ...c,
+      id: c._id,
+      postTitle: c.postId?.title || "Unknown post",
+      postId: c.postId?._id || c.postId,
+    }))
+  );
+});
+
+// Delete a comment (admin)
+app.delete("/api/comments/:id", async (req, res) => {
+  await Comment.findByIdAndDelete(req.params.id);
+  res.status(204).send();
 });
 
 const distPath = join(__dirname, "../../dist");
