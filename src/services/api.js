@@ -20,6 +20,13 @@ async function request(path, options = {}) {
   }
 
   if (response.status === 204) return null;
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const text = await response.text();
+    throw new Error(`Server returned non-JSON response: ${text.slice(0, 120)}`);
+  }
+
   return response.json();
 }
 

@@ -42,14 +42,14 @@ function BlogManagerPage() {
 
   const loadComments = useCallback(() => {
     setCommentsLoading(true);
-    api.getComments().then(setComments).finally(() => setCommentsLoading(false));
+    api.getComments().then(setComments).catch(console.error).finally(() => setCommentsLoading(false));
   }, []);
 
   const submitLabel = useMemo(() => (editingId ? "Update Post" : "Add Post"), [editingId]);
   const formPreviewUrl = form.imageUrl || extractImageFromContent(form.content);
 
   useEffect(() => {
-    api.getPosts().then(setPosts).finally(() => setLoading(false));
+    api.getPosts().then(setPosts).catch(console.error).finally(() => setLoading(false));
     loadComments();
   }, [loadComments]);
 

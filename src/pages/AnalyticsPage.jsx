@@ -6,7 +6,7 @@ function AnalyticsPage() {
   const [analytics, setAnalytics] = useState(null);
 
   useEffect(() => {
-    api.getAnalytics().then(setAnalytics);
+    api.getAnalytics().then(setAnalytics).catch(console.error);
   }, []);
 
   if (!analytics) {
